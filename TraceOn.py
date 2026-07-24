@@ -269,6 +269,52 @@ def update_wezterm_config(config_path, new_image_path, initial_cols=None, initia
 
 
 
+def is_app_in_path(app_dir):
+    """Check if app_dir is already in the user PATH."""
+    path = os.environ.get('PATH', '')
+    entries = [p.strip().rstrip('\\') for p in path.split(';') if p.strip()]
+    norm = os.path.normpath(app_dir).lower().rstrip('\\')
+    return any(os.path.normpath(e).lower().rstrip('\\') == norm for e in entries)
+
+
+def add_app_to_path(app_dir):
+    """Add app_dir to user PATH via Windows registry. Returns True if added."""
+    if sys.platform != 'win32':
+        return False
+    try:
+        import winreg
+        import ctypes
+    except ImportError:
+        return False
+
+    app_dir = os.path.abspath(app_dir)
+    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Environment', 0,
+                         winreg.KEY_READ | winreg.KEY_SET_VALUE)
+    try:
+        path, _ = winreg.QueryValueEx(key, 'PATH')
+    except (FileNotFoundError, OSError):
+        path = ''
+
+    entries = [p.strip().rstrip('\\') for p in path.split(';') if p.strip()]
+    norm = os.path.normpath(app_dir).lower().rstrip('\\')
+    if any(os.path.normpath(e).lower().rstrip('\\') == norm for e in entries):
+        winreg.CloseKey(key)
+        return False
+
+    entries.append(app_dir)
+    winreg.SetValueEx(key, 'PATH', 0, winreg.REG_EXPAND_SZ, ';'.join(entries))
+    winreg.CloseKey(key)
+
+    try:
+        HWND_BROADCAST = 0xFFFF
+        WM_SETTINGCHANGE = 0x001A
+        ctypes.windll.user32.SendMessageTimeoutW(
+            HWND_BROADCAST, WM_SETTINGCHANGE, 0, 'Environment', 0, 5000, None)
+    except Exception:
+        pass
+    return True
+
+
 def launch_wezterm(exe_path, cwd):
     """Launch WezTerm in the given working directory"""
     try:
@@ -301,6 +347,19 @@ def main():
 
     # Load config
     config = load_config(config_path)
+
+    # Check PATH — offer to add if not present (Windows only)
+    if not is_wsl() and not is_app_in_path(app_dir):
+        print(f'TraceOn folder is not in PATH.')
+        print(f'Would you like to add it so "TraceOn" works from any terminal?')
+        answer = input('Add to PATH? [Y/n]: ').strip().lower()
+        if answer in ('', 'y', 'yes'):
+            if add_app_to_path(app_dir):
+                print(f'Added to PATH.  (New terminals only.)')
+                print()
+            else:
+                print(f'Already in PATH or failed to add.')
+                print()
 
     image_dir = config.get('image_directory', '')
     if not image_dir:
