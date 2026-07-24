@@ -36,7 +36,7 @@ if exist "release" rmdir /s /q "release"
 mkdir "release"
 xcopy "dist\TraceOn\*" "release\" /E /Q >nul
 copy "wezterm_template.lua" "release\" >nul
-copy "README.md" "release\README.md" >nul
+copy "README.md" "release\" >nul
 echo   Release folder: release\
 echo.
 echo   ============================================
