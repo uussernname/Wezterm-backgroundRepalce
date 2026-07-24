@@ -47,7 +47,7 @@ echo     For the end user:
 echo       1. Unzip to any folder
 echo       2. Edit config.json (paths + image folder)
 echo       3. Update wezterm.lua (see template)
-echo       4. Run add_to_path.bat (optional)
+echo       4. Add this folder to PATH manually
 echo       5. Open new terminal, type "TraceOn"
 echo   ============================================
 echo.
