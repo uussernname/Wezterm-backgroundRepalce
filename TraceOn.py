@@ -14,6 +14,7 @@ import json
 import os
 import random
 import re
+import struct
 import subprocess
 import sys
 import platform
@@ -24,8 +25,10 @@ import platform
 DEFAULT_CONFIG = {
     "image_directory": "E:/Picture/safe",
     "wezterm_config_path": "C:/Users/Dongcheng2/.config/wezterm/wezterm.lua",
-    "wezterm_exe_path": "D:/app/WezTerm/wezterm-gui.exe",
+    "wezterm_exe_path": "D:/app/WezTerm/WezTerm/wezterm-gui.exe",
     "launch_wezterm": True,
+    "window_mode": "fit_image",
+    "reference_cols": 60,
     "image_extensions": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"],
 }
 
@@ -122,22 +125,112 @@ def get_image_files(directory, extensions):
     return image_files
 
 
-def update_wezterm_config(config_path, new_image_path):
-    """Update the bg_image_path variable in wezterm.lua"""
+def get_image_size(filepath):
+    """Read image dimensions (width, height) without external libraries.
+
+    Supports: JPEG, PNG, GIF, BMP, WebP.
+    Returns (width, height) or (0, 0) on failure.
+    """
+    try:
+        with open(filepath, 'rb') as f:
+            head = f.read(32)
+            if len(head) < 2:
+                return (0, 0)
+
+            # JPEG: look for SOF0/SOF2 marker (0xFF 0xC0 ~ 0xFF 0xC2)
+            if head[:2] == b'\xff\xd8':
+                f.seek(2)
+                while True:
+                    chunk = f.read(4)
+                    if len(chunk) < 4:
+                        break
+                    marker, length = struct.unpack('>HH', chunk)
+                    if 0xFFC0 <= marker <= 0xFFC2:
+                        data = f.read(6)
+                        if len(data) >= 6:
+                            _, h, w, _ = struct.unpack('>BHHB', data)
+                            return (w, h)
+                        f.seek(length - 8, 1)  # already consumed 6 extra bytes
+                    else:
+                        f.seek(length - 2, 1)
+                return (0, 0)
+
+            # PNG: IHDR chunk
+            if head[:8] == b'\x89PNG\r\n\x1a\n':
+                f.seek(16)
+                data = f.read(8)
+                w, h = struct.unpack('>II', data)
+                return (w, h)
+
+            # GIF: logical screen descriptor
+            if head[:6] in (b'GIF87a', b'GIF89a'):
+                w, h = struct.unpack('<HH', head[6:10])
+                return (w, h)
+
+            # BMP: DIB header
+            if head[:2] == b'BM':
+                f.seek(18)
+                data = f.read(8)
+                w, h = struct.unpack('<ii', data)
+                return (abs(w), abs(h))
+
+            # WebP: VP8 / VP8L / VP8X
+            if head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+                fmt = head[12:16]
+                if fmt == b'VP8 ':  # lossy
+                    data = f.read(10)[-4:]
+                    w = struct.unpack('<H', data[0:2])[0] & 0x3FFF
+                    h = struct.unpack('<H', data[2:4])[0] & 0x3FFF
+                    return (w, h)
+                elif fmt == b'VP8L':  # lossless
+                    f.seek(21)
+                    data = f.read(4)
+                    bits = struct.unpack('<I', data)[0]
+                    w = (bits & 0x3FFF) + 1
+                    h = ((bits >> 14) & 0x3FFF) + 1
+                    return (w, h)
+                elif fmt == b'VP8X':  # extended
+                    f.seek(24)
+                    data = f.read(6)
+                    w = struct.unpack('<I', data[:3] + b'\x00')[0] + 1
+                    h = struct.unpack('<I', data[3:] + b'\x00')[0] + 1
+                    return (w, h)
+
+    except Exception:
+        pass
+    return (0, 0)
+
+
+def update_wezterm_config(config_path, new_image_path, initial_cols=None, initial_rows=None):
+    """Update the bg_image_path (and optionally cols/rows) in wezterm.lua"""
     with open(config_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    pattern = r'(local\s+bg_image_path\s*=\s*")[^"]*(")'
-    replacement = f'\\g<1>{new_image_path}\\g<2>'
-    new_content = re.sub(pattern, replacement, content)
+    # bg_image_path
+    content = re.sub(
+        r'(local\s+bg_image_path\s*=\s*")[^"]*(")',
+        f'\\g<1>{new_image_path}\\g<2>',
+        content,
+    )
 
-    if new_content == content:
-        print('[error] Could not find bg_image_path variable in wezterm.lua')
-        print('        Expected format: local bg_image_path = "path"')
-        return False
+    # bg_initial_cols
+    if initial_cols is not None and 'bg_initial_cols' in content:
+        content = re.sub(
+            r'(local\s+bg_initial_cols\s*=\s*)[\d.]+',
+            f'\\g<1>{initial_cols}',
+            content,
+        )
+
+    # bg_initial_rows
+    if initial_rows is not None and 'bg_initial_rows' in content:
+        content = re.sub(
+            r'(local\s+bg_initial_rows\s*=\s*)[\d.]+',
+            f'\\g<1>{initial_rows}',
+            content,
+        )
 
     with open(config_path, 'w', encoding='utf-8') as f:
-        f.write(new_content)
+        f.write(content)
 
     return True
 
@@ -227,9 +320,27 @@ def main():
         print(f'[error] wezterm.lua not found: {wezterm_config}')
         return
 
-    success = update_wezterm_config(resolved_wezterm, bg_path)
+    # Calculate window cols/rows to match image aspect ratio
+    cols, rows = None, None
+    window_mode = config.get('window_mode', 'default')
+    if window_mode == 'fit_image':
+        ref_cols = config.get('reference_cols', 120)
+        img_w, img_h = get_image_size(chosen)
+        if img_w > 0 and img_h > 0:
+            # char cell aspect: ~0.45 for JetBrains Mono at normal line height
+            char_aspect = 0.45
+            image_aspect = img_w / img_h
+            cols = ref_cols
+            rows = int(ref_cols / image_aspect * char_aspect)
+            rows = max(10, min(rows, 200))  # clamp to reasonable range
+
+    success = update_wezterm_config(resolved_wezterm, bg_path, cols, rows)
     if success:
-        print(f'Background updated -> {os.path.basename(chosen)}')
+        if cols and rows:
+            print(f'Background updated -> {os.path.basename(chosen)}  '
+                  f'({img_w}x{img_h} | cols={cols} rows={rows})')
+        else:
+            print(f'Background updated -> {os.path.basename(chosen)}')
 
     # Launch WezTerm
     launch = config.get('launch_wezterm', True)

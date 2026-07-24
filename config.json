@@ -1,7 +1,9 @@
 {
     "image_directory": "E:/Picture/safe",
     "wezterm_config_path": "C:/Users/Dongcheng2/.config/wezterm/wezterm.lua",
-    "wezterm_exe_path": "D:/app/WezTerm/wezterm-gui.exe",
+    "wezterm_exe_path": "D:/app/WezTerm/WezTerm/wezterm-gui.exe",
     "launch_wezterm": true,
+    "window_mode": "fit_image",
+    "reference_cols": 60,
     "image_extensions": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"]
 }

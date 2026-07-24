@@ -235,6 +235,8 @@ def main():
     print(" [4/4] Saving configuration …")
 
     config["launch_wezterm"] = True
+    config["window_mode"] = "fit_image"
+    config["reference_cols"] = 60
     config["image_extensions"] = IMAGE_EXTENSIONS
 
     with open(config_path, "w", encoding="utf-8") as f:
