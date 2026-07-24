@@ -202,31 +202,64 @@ def get_image_size(filepath):
 
 
 def update_wezterm_config(config_path, new_image_path, initial_cols=None, initial_rows=None):
-    """Update the bg_image_path (and optionally cols/rows) in wezterm.lua"""
+    """Update bg_image_path (and inject/update cols/rows) in wezterm.lua"""
     with open(config_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # bg_image_path
+    # bg_image_path — always update
     content = re.sub(
         r'(local\s+bg_image_path\s*=\s*")[^"]*(")',
         f'\\g<1>{new_image_path}\\g<2>',
         content,
     )
 
-    # bg_initial_cols
-    if initial_cols is not None and 'bg_initial_cols' in content:
-        content = re.sub(
-            r'(local\s+bg_initial_cols\s*=\s*)[\d.]+',
-            f'\\g<1>{initial_cols}',
-            content,
-        )
+    # Anchor: line after bg_image_path, for injecting missing vars
+    anchor = f'local bg_image_path = "{new_image_path}"'
+    anchor_idx = content.find(anchor)
+    if anchor_idx != -1:
+        anchor_eol = content.index('\n', anchor_idx)
 
-    # bg_initial_rows
-    if initial_rows is not None and 'bg_initial_rows' in content:
-        content = re.sub(
-            r'(local\s+bg_initial_rows\s*=\s*)[\d.]+',
-            f'\\g<1>{initial_rows}',
-            content,
+        # bg_initial_cols — update existing, or inject
+        if initial_cols is not None:
+            if 'bg_initial_cols' in content:
+                content = re.sub(
+                    r'(local\s+bg_initial_cols\s*=\s*)[\d.]+',
+                    f'\\g<1>{initial_cols}',
+                    content,
+                )
+            else:
+                content = (
+                    content[:anchor_eol + 1]
+                    + f'local bg_initial_cols = {initial_cols}\n'
+                    + content[anchor_eol + 1:]
+                )
+
+        # bg_initial_rows — update existing, or inject
+        if initial_rows is not None:
+            if 'bg_initial_rows' in content:
+                content = re.sub(
+                    r'(local\s+bg_initial_rows\s*=\s*)[\d.]+',
+                    f'\\g<1>{initial_rows}',
+                    content,
+                )
+            else:
+                content = (
+                    content[:anchor_eol + 1]
+                    + f'local bg_initial_rows = {initial_rows}\n'
+                    + content[anchor_eol + 1:]
+                )
+
+    # Ensure config.initial_cols / config.initial_rows exist
+    if 'config.initial_cols' not in content:
+        content = content.replace(
+            'return config',
+            'config.initial_cols = bg_initial_cols\nconfig.initial_rows = bg_initial_rows\n\nreturn config',
+        )
+    if 'config.initial_rows' not in content:
+        # initial_cols was injected but not rows
+        content = content.replace(
+            'config.initial_cols = bg_initial_cols\n',
+            'config.initial_cols = bg_initial_cols\nconfig.initial_rows = bg_initial_rows\n',
         )
 
     with open(config_path, 'w', encoding='utf-8') as f:
