@@ -5,54 +5,47 @@
 
 ---
 
-## 首次安装（拉取项目后必做 4 步）
+## 首次安装（拉取项目后只需 3 步）
 
 ### 前提
 
 - Windows 10 / 11
 - 已安装 [WezTerm](https://wezterm.org/)
-- 已安装 [Python 3.8+](https://www.python.org/downloads/)
+- 已安装 [Python 3.8+](https://www.python.org/downloads/)（安装时勾选 "Add Python to PATH"）
 
 ### 第 1 步：配置 wezterm.lua（一次性）
 
 打开你的 `wezterm.lua`（通常在 `C:\Users\你的用户名\.config\wezterm\wezterm.lua`），
-参照 `wezterm_template.lua` 中的模板，加入 TraceOn 需要的三段代码：
+参照 `wezterm_template.lua` 中的模板，加入 TraceOn 需要的三段代码。
 
-1. **三个变量**（放在文件靠前位置）
-2. **背景图配置块**
-3. **窗口尺寸配置**
+也可直接把 `wezterm_template.lua` 中注释掉的完整示例复制过去作为起点。
 
-如果你使用的是默认 wezterm.lua，可以直接把 `wezterm_template.lua` 中注释掉
-的完整示例复制过去作为起点。
+### 第 2 步：双击运行安装程序
 
-### 第 2 步：运行配置向导
+```
+双击 install.bat
+```
+
+或：
 
 ```powershell
-cd 项目目录
 python install.py
 ```
 
-向导会：
-- 自动检测 `wezterm.lua` 路径
-- 自动检测 `wezterm-gui.exe` 路径
-- 询问你的图片文件夹路径
-- 自动将项目目录加入用户 PATH
+**这一步会自动完成：**
+- 检测 WezTerm 路径（找不到会提示你手动输入）
+- 询问图片文件夹
+- 生成 config.json
+- 创建虚拟环境 + 安装 PyInstaller
+- 打包 TraceOn.exe
+- 将 `dist\TraceOn\` 加入 PATH
 
-### 第 3 步：打包 exe
-
-```powershell
-.\setup.bat      # 创建虚拟环境 + 安装 PyInstaller（仅一次）
-.\build_exe.bat  # 打包为 dist\TraceOn\
-```
-
-### 第 4 步：验证
+### 第 3 步：打开新终端，验证
 
 ```powershell
-# 打开一个新终端
 TraceOn
 ```
 
-看到类似输出即成功：
 ```
 Found 274 images. Selected: example.jpg  (1920x1080 | cols=60 rows=15)
 Background updated.
