@@ -31,14 +31,24 @@ echo   Build complete!
 echo   Output: dist\TraceOn\
 echo ========================================
 echo.
-echo   How to use:
-echo     1. Copy the entire dist\TraceOn\ folder
-echo        to e.g. D:\Tools\TraceOn\
-echo     2. Add D:\Tools\TraceOn to system PATH
-echo        (NOT the .exe file, but the FOLDER)
-echo     3. Run "TraceOn" in any terminal
+echo [3/3] Preparing release folder ...
+if exist "release" rmdir /s /q "release"
+mkdir "release"
+xcopy "dist\TraceOn\*" "release\" /E /Q >nul
+copy "wezterm_template.lua" "release\" >nul
+copy "README.md" "release\README.md" >nul
+echo   Release folder: release\
 echo.
-echo   config.json will be auto-generated
-echo   inside the TraceOn folder on first run.
+echo   ============================================
+echo     How to distribute:
+echo       Zip the "release" folder and share it.
+echo.
+echo     For the end user:
+echo       1. Unzip to any folder
+echo       2. Edit config.json (paths + image folder)
+echo       3. Update wezterm.lua (see template)
+echo       4. Run add_to_path.bat (optional)
+echo       5. Open new terminal, type "TraceOn"
+echo   ============================================
 echo.
 pause
