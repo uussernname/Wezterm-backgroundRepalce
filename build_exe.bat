@@ -36,6 +36,7 @@ if exist "release" rmdir /s /q "release"
 mkdir "release"
 xcopy "dist\TraceOn\*" "release\" /E /Q >nul
 copy "wezterm_template.lua" "release\" >nul
+copy "add_to_path.bat" "release\" >nul
 copy "README.md" "release\" >nul
 echo   Release folder: release\
 echo.
@@ -46,9 +47,8 @@ echo.
 echo     For the end user:
 echo       1. Unzip to any folder
 echo       2. Edit config.json (paths + image folder)
-echo       3. Update wezterm.lua (see template)
-echo       4. Add this folder to PATH manually
-echo       5. Open new terminal, type "TraceOn"
+echo       3. Double-click add_to_path.bat
+echo       4. Open new terminal, type "TraceOn"
 echo   ============================================
 echo.
 pause
