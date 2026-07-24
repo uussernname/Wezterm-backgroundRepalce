@@ -1,157 +1,128 @@
 # TraceOn — WezTerm 背景图随机切换器
 
-每次在终端输入 `TraceOn`，从预设图片目录随机抽取一张设为 WezTerm 背景。
+每次在终端输入 `TraceOn`，从预设图片目录随机抽取一张设为 WezTerm 背景，
+窗口尺寸自动匹配图片宽高比。
 
 ---
 
-## 快速开始（三选一）
+## 首次安装（拉取项目后必做 4 步）
 
-### 方式一：从源码运行
+### 前提
+
+- Windows 10 / 11
+- 已安装 [WezTerm](https://wezterm.org/)
+- 已安装 [Python 3.8+](https://www.python.org/downloads/)
+
+### 第 1 步：配置 wezterm.lua（一次性）
+
+打开你的 `wezterm.lua`（通常在 `C:\Users\你的用户名\.config\wezterm\wezterm.lua`），
+参照 `wezterm_template.lua` 中的模板，加入 TraceOn 需要的三段代码：
+
+1. **三个变量**（放在文件靠前位置）
+2. **背景图配置块**
+3. **窗口尺寸配置**
+
+如果你使用的是默认 wezterm.lua，可以直接把 `wezterm_template.lua` 中注释掉
+的完整示例复制过去作为起点。
+
+### 第 2 步：运行配置向导
 
 ```powershell
-# 1. 进入项目目录
-cd D:\UselessFile\backgroudSwitcher
-
-# 2. 一键安装配置（自动检测 WezTerm 路径，询问图片目录）
+cd 项目目录
 python install.py
-
-# 3. 日常使用
-python TraceOn.py
 ```
 
-### 方式二：打包为 exe 后运行
+向导会：
+- 自动检测 `wezterm.lua` 路径
+- 自动检测 `wezterm-gui.exe` 路径
+- 询问你的图片文件夹路径
+- 自动将项目目录加入用户 PATH
+
+### 第 3 步：打包 exe
 
 ```powershell
-# 1. 创建虚拟环境并安装 PyInstaller
-.\setup.bat
-
-# 2. 运行配置脚本
-python install.py
-
-# 3. 打包
-.\build_exe.bat
-
-# 4. 把 dist\TraceOn\ 文件夹复制到固定位置（如 D:\Tools\TraceOn\）
-# 5. 将该目录加入系统 PATH
-# 6. 在任意终端输入 TraceOn
+.\setup.bat      # 创建虚拟环境 + 安装 PyInstaller（仅一次）
+.\build_exe.bat  # 打包为 dist\TraceOn\
 ```
 
-### 方式三：直接使用已打包的 exe
+### 第 4 步：验证
 
 ```powershell
-# 1. 将 dist\TraceOn\ 整个文件夹复制到 D:\Tools\TraceOn\
-# 2. 在 D:\Tools\TraceOn\ 下运行配置
-cd D:\Tools\TraceOn
-python install.py
+# 打开一个新终端
+TraceOn
+```
 
-# 3. 在任意终端输入 TraceOn
+看到类似输出即成功：
+```
+Found 274 images. Selected: example.jpg  (1920x1080 | cols=60 rows=15)
+Background updated.
+WezTerm started in: D:\Projects
 ```
 
 ---
 
-## 项目文件说明
+## 日常使用
+
+```powershell
+# 任意目录下
+TraceOn
+```
+
+---
+
+## 项目文件
 
 ```
 backgroudSwitcher/
-├── TraceOn.py          # 主程序 — 随机选图、更新 wezterm.lua、启动 WezTerm
-├── install.py          # 安装脚本 — 首次配置向导（检测路径 + 生成 config.json）
-├── config.json         # 配置文件（由 install.py 生成，也可手动编辑）
-├── setup.bat           # 一键创建 venv + 安装 PyInstaller
-├── build_exe.bat       # 一键打包为 dist\TraceOn\TraceOn.exe（--onedir 模式）
-└── README.md           # 本文件
+├── TraceOn.py              # 主程序
+├── install.py              # 首次配置向导
+├── config.json             # 用户配置（install.py 生成）
+├── wezterm_template.lua    # wezterm.lua 模板（复制到你的 wezterm.lua）
+├── setup.bat               # 创建 venv + 安装 PyInstaller
+├── build_exe.bat           # 打包为 dist\TraceOn\（--onedir 模式）
+├── README.md               # 本文件
+└── dist/
+    └── TraceOn/
+        ├── TraceOn.exe
+        └── _internal/
 ```
 
 ---
 
-## install.py 配置向导说明
+## 配置项说明 (config.json)
 
-运行 `python install.py` 后会依次执行：
-
-| 步骤 | 内容 | 自动检测 | 手动输入 |
-|------|------|----------|----------|
-| 1 | 定位 `wezterm.lua` | `%USERPROFILE%\.config\wezterm\` / `%APPDATA%\wezterm\` | 提供完整路径 |
-| 2 | 定位 `wezterm-gui.exe` | 系统 PATH / `Program Files\WezTerm\` / LocalAppData | 提供完整路径 |
-| 3 | 设置图片目录 | — | 提供目录路径 |
-| 4 | 保存 config.json | — | — |
-| 可选 | 添加到用户 PATH | 通过注册表修改 | — |
-
-### config.json 示例
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `image_directory` | string | 存放背景图片的目录，**必须用正斜杠 `/`** |
+| `wezterm_config_path` | string | `wezterm.lua` 的完整路径 |
+| `wezterm_exe_path` | string | `wezterm-gui.exe` 的完整路径 |
+| `launch_wezterm` | bool | 是否启动 WezTerm，默认 `true` |
+| `window_mode` | string | `"fit_image"` = 窗口按图片比例 / `"default"` = 不调整 |
+| `reference_cols` | int | fit_image 模式下的参考列宽，默认 60 |
+| `image_extensions` | list | 支持的图片格式 |
 
 ```json
 {
     "image_directory": "E:/Pictures/Wallpapers",
-    "wezterm_config_path": "C:/Users/YourName/.config/wezterm/wezterm.lua",
+    "wezterm_config_path": "C:/Users/xxx/.config/wezterm/wezterm.lua",
     "wezterm_exe_path": "C:/Program Files/WezTerm/wezterm-gui.exe",
     "launch_wezterm": true,
+    "window_mode": "fit_image",
+    "reference_cols": 60,
     "image_extensions": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"]
 }
 ```
-
-> **注意**：所有路径使用正斜杠 `/`，不要用反斜杠。
-
----
-
-## 配置项说明
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `image_directory` | string | 是 | 存放背景图片的目录，支持中文路径 |
-| `wezterm_config_path` | string | 是 | `wezterm.lua` 文件的完整路径 |
-| `wezterm_exe_path` | string | 是 | `wezterm-gui.exe` 的完整路径 |
-| `launch_wezterm` | bool | 否 | 是否自动启动 WezTerm，默认 `true` |
-| `image_extensions` | list | 否 | 支持的图片格式，默认 `.jpg .jpeg .png .gif .bmp .webp` |
 
 ---
 
 ## 工作原理
 
-1. `TraceOn` 被调用
-2. 读取同目录下的 `config.json`
-3. 扫描 `image_directory` 中所有支持的图片文件
-4. 随机选取一张
-5. 用正则替换 `wezterm.lua` 中 `bg_image_path` 的值（路径自动转正斜杠）
-6. 在**当前目录**启动 WezTerm（`wezterm-gui.exe start --cwd`）
-
-### wezterm.lua 要求
-
-你的 `wezterm.lua` 中需要有以下格式的背景图配置：
-
-```lua
-local bg_image_path = "E:/Pictures/wallpaper.jpg"
-
-config.background = {
-    {
-        source = { File = bg_image_path },
-        hsb = { brightness = 0.3 },
-    },
-}
-```
-
-> `TraceOn` 只替换 `bg_image_path` 变量的值，其余配置原封不动。
-
----
-
-## 从源码构建 exe
-
-```powershell
-# 1. 首次需要创建 venv（仅一次）
-.\setup.bat
-
-# 2. 打包（每次修改 TraceOn.py 后执行）
-.\build_exe.bat
-
-# 输出在 dist\TraceOn\ 目录
-```
-
-打包使用 `--onedir` 模式，避免 `--onefile` 向 `%TEMP%` 解压时被安全软件拦截。
-
----
-
-## 要求
-
-- **操作系统**：Windows 10 / 11
-- **Python**：3.8+（仅在从源码运行时需要）
-- **WezTerm**：已安装并配置好 `wezterm.lua`
+1. 读取同目录下的 `config.json`
+2. 扫描 `image_directory` 中所有图片文件
+3. 随机选取一张
+4. 用纯 Python 读取图片尺寸（无需 Pillow），计算窗口行列数
+5. 正则替换 `wezterm.lua` 中 `bg_image_path`、`bg_initial_cols`、`bg_initial_rows`
+6. 在当前目录启动 WezTerm
 
 ---
 
@@ -159,20 +130,16 @@ config.background = {
 
 ### Q: `TraceOn` 在终端中找不到？
 
-A: 检查 PATH 环境变量：
-- 确保添加的是 **目录**（如 `D:\Tools\TraceOn`），不是 `.exe` 文件路径
-- 添加后需要**新开一个终端**窗口才能生效
+A: PATH 里加的是**目录**（如 `D:\Tools\TraceOn`），不是 `.exe` 文件。加完后需新开终端。
 
-### Q: 运行后 WezTerm 没有变化？
+### Q: 运行后 WezTerm 报错？
 
-A: WezTerm 需要刷新才能加载新背景配置。按 `Ctrl+Shift+R` 或在 WezTerm 中执行 `wezterm restart`。
+A: 确认 `wezterm.lua` 中有 TraceOn 需要的模板变量。参考 `wezterm_template.lua`。
 
-### Q: 只想更新背景，不想打开新的 WezTerm 窗口？
+### Q: 只想换背景，不想打开新窗口？
 
-A: 编辑 `config.json`，将 `"launch_wezterm"` 设为 `false`。
+A: `config.json` 中设 `"launch_wezterm": false`。
 
-### Q: 修改图片目录后如何更新配置？
+### Q: 怎么改窗口大小？
 
-A: 两种方法：
-- 重新运行 `python install.py`
-- 直接编辑 `config.json` 中的 `image_directory`
+A: 调 `reference_cols`。当前 60，改大窗口更宽，改小更窄。
