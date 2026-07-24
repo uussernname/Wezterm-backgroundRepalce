@@ -125,6 +125,11 @@ backgroudSwitcher/
 
 A: PATH 里加的是**目录**（如 `D:\Tools\TraceOn`），不是 `.exe` 文件。加完后需新开终端。
 
+### Q: Windows 阻止运行 / SmartScreen 弹窗？
+
+A: exe 没有数字签名。右键 `TraceOn.exe` → 属性 → 勾选「解除锁定」→ 确定。
+或在 PowerShell 中运行：`Get-ChildItem -Recurse | Unblock-File`
+
 ### Q: 运行后 WezTerm 报错？
 
 A: 确认 `wezterm.lua` 中有 TraceOn 需要的模板变量。参考 `wezterm_template.lua`。
